@@ -1,0 +1,11 @@
+package com.property.dto.request;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+
+@Data
+public class RepairCompleteDTO {
+
+    @NotBlank
+    private String result;
+}

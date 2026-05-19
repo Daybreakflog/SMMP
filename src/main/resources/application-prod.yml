@@ -1,0 +1,53 @@
+spring:
+  datasource:
+    type: com.alibaba.druid.pool.DruidDataSource
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    druid:
+      initial-size: 10
+      min-idle: 10
+      max-active: 50
+      test-while-idle: true
+      validation-query: SELECT 1
+      stat-view-servlet:
+        enabled: false
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      password: ${REDIS_PASSWORD:}
+      database: 0
+      timeout: 5000ms
+      lettuce:
+        pool:
+          max-active: 16
+          max-idle: 8
+          min-idle: 2
+
+  rabbitmq:
+    host: ${RABBIT_HOST}
+    port: ${RABBIT_PORT:5672}
+    username: ${RABBIT_USER}
+    password: ${RABBIT_PASS}
+    virtual-host: /
+
+  flyway:
+    enabled: true
+
+logging:
+  level:
+    root: warn
+    com.property: info
+
+xxl:
+  job:
+    admin:
+      addresses: ${XXL_JOB_ADMIN_URL}
+    accessToken: ${XXL_JOB_ACCESS_TOKEN}
+    executor:
+      appname: property-backend
+      port: 9999
+      logpath: /data/applogs/xxl-job/jobhandler
+      logretentiondays: 30

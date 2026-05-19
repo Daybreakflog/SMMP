@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.property.mapper.StatisticsMapper">
+
+    <!-- 当月工单总数 -->
+    <select id="countWorkOrderTotal" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM work_orders
+        WHERE deleted = 0
+          AND DATE_FORMAT(created_at, '%Y-%m') = #{yearMonth}
+    </select>
+
+    <!-- 当月已完成工单数 -->
+    <select id="countWorkOrderDone" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM work_orders
+        WHERE deleted = 0
+          AND DATE_FORMAT(created_at, '%Y-%m') = #{yearMonth}
+          AND status = 'DONE'
+    </select>
+
+    <!-- 当月超时工单数：SLA 已到期且未完成/关闭 -->
+    <select id="countWorkOrderOvertime" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM work_orders
+        WHERE deleted = 0
+          AND DATE_FORMAT(created_at, '%Y-%m') = #{yearMonth}
+          AND sla_due_at IS NOT NULL
+          AND sla_due_at &lt; NOW()
+          AND status NOT IN ('DONE', 'CLOSED', 'CANCELLED')
+    </select>
+
+    <!-- 当月投诉数 -->
+    <select id="countComplaint" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM complaints
+        WHERE deleted = 0
+          AND DATE_FORMAT(created_at, '%Y-%m') = #{yearMonth}
+    </select>
+
+    <!-- 当月账单应收合计（NULL 归零） -->
+    <select id="sumBillTotal" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(total_amount), 0)
+        FROM bills
+        WHERE deleted = 0
+          AND period = #{period}
+    </select>
+
+    <!-- 当月账单实收合计（NULL 归零） -->
+    <select id="sumBillPaid" resultType="java.math.BigDecimal">
+        SELECT COALESCE(SUM(paid_amount), 0)
+        FROM bills
+        WHERE deleted = 0
+          AND period = #{period}
+    </select>
+
+    <!-- 当月公告数 -->
+    <select id="countAnnouncement" resultType="java.lang.Long">
+        SELECT COUNT(*)
+        FROM announcements
+        WHERE deleted = 0
+          AND DATE_FORMAT(created_at, '%Y-%m') = #{yearMonth}
+    </select>
+
+    <!-- 工单趋势：按 created_at 日期聚合，统计新建数与完成数 -->
+    <select id="selectWorkOrderTrend"
+            resultType="com.property.modules.statistics.vo.WorkOrderTrendVO">
+        SELECT DATE_FORMAT(created_at, '%Y-%m-%d')        AS date,
+               COUNT(*)                                    AS newCount,
+               SUM(IF(status = 'DONE', 1, 0))             AS doneCount
+        FROM work_orders
+        WHERE deleted = 0
+          AND created_at >= #{startDate}
+        GROUP BY DATE_FORMAT(created_at, '%Y-%m-%d')
+        ORDER BY date ASC
+    </select>
+
+    <!-- 账单趋势：按 period 聚合，统计应收与实收 -->
+    <select id="selectBillTrend"
+            resultType="com.property.modules.statistics.vo.BillTrendVO">
+        SELECT period                AS month,
+               SUM(total_amount)     AS totalAmount,
+               SUM(paid_amount)      AS paidAmount
+        FROM bills
+        WHERE deleted = 0
+          AND period >= #{startMonth}
+        GROUP BY period
+        ORDER BY period ASC
+    </select>
+
+</mapper>

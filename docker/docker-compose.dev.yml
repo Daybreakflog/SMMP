@@ -1,0 +1,95 @@
+version: "3.9"
+
+# 注意：本文件仅启动外部依赖服务。
+# MySQL（property_db）使用宿主机本地安装的实例（localhost:3306, password=root）。
+# 若要完全容器化，取消下方 mysql-app 服务的注释并停止本地 MySQL 服务。
+
+services:
+
+  # ─────────────────────────────────────────────
+  # Redis 7（Sa-Token 会话 + 缓存）
+  # ─────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: prop_redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─────────────────────────────────────────────
+  # RabbitMQ 3.13（消息队列）
+  # ─────────────────────────────────────────────
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    container_name: prop_rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"   # 管理页面：http://localhost:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+
+  # ─────────────────────────────────────────────
+  # MySQL 8（仅供 XXL-Job Admin 使用，端口 3307 避免与本地 MySQL 冲突）
+  # ─────────────────────────────────────────────
+  mysql-xxljob:
+    image: mysql:8.0
+    container_name: prop_mysql_xxljob
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: xxl_job
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_xxljob_data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --default-time-zone=+08:00
+
+  # ─────────────────────────────────────────────
+  # XXL-Job Admin 2.4.1（定时任务管理）
+  # ─────────────────────────────────────────────
+  xxl-job-admin:
+    image: xuxueli/xxl-job-admin:2.4.1
+    container_name: prop_xxljob_admin
+    environment:
+      PARAMS: >-
+        --spring.datasource.url=jdbc:mysql://mysql-xxljob:3306/xxl_job?useUnicode=true&characterEncoding=UTF-8&autoReconnect=true&serverTimezone=Asia/Shanghai
+        --spring.datasource.username=root
+        --spring.datasource.password=root
+        --xxl.job.accessToken=default_token
+    ports:
+      - "8090:8080"
+    depends_on:
+      mysql-xxljob:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+  rabbitmq_data:
+  mysql_xxljob_data:

@@ -1,0 +1,36 @@
+# === Build ===
+target/
+!.mvn/wrapper/maven-wrapper.jar
+*.jar
+*.war
+
+# === IDE ===
+.idea/
+*.iml
+*.iws
+*.ipr
+.vscode/
+.settings/
+.project
+.classpath
+.factorypath
+nbproject/
+out/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# === Logs ===
+*.log
+logs/
+
+# === Environment ===
+.env
+.env.*
+!.env.example
+
+# === Claude Code ===
+.claude/
+CLAUDE.md
