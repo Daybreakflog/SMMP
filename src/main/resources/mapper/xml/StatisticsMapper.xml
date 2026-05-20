@@ -66,7 +66,7 @@
 
     <!-- 工单趋势：按 created_at 日期聚合，统计新建数与完成数 -->
     <select id="selectWorkOrderTrend"
-            resultType="com.property.modules.statistics.vo.WorkOrderTrendVO">
+            resultType="com.property.dto.response.WorkOrderTrendVO">
         SELECT DATE_FORMAT(created_at, '%Y-%m-%d')        AS date,
                COUNT(*)                                    AS newCount,
                SUM(IF(status = 'DONE', 1, 0))             AS doneCount
@@ -79,7 +79,7 @@
 
     <!-- 账单趋势：按 period 聚合，统计应收与实收 -->
     <select id="selectBillTrend"
-            resultType="com.property.modules.statistics.vo.BillTrendVO">
+            resultType="com.property.dto.response.BillTrendVO">
         SELECT period                AS month,
                SUM(total_amount)     AS totalAmount,
                SUM(paid_amount)      AS paidAmount
