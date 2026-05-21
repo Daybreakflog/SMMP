@@ -33,7 +33,9 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
 @SpringBootTest(properties = {
         "spring.flyway.enabled=true",
         "spring.flyway.locations=classpath:db/migration",
-        "app.websocket.enabled=false"
+        "app.websocket.enabled=false",
+        "management.health.redis.enabled=false",
+        "management.health.rabbit.enabled=false"
 })
 class InfraIntegrationTest {
 
