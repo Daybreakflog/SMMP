@@ -29,9 +29,19 @@ management:
   endpoint:
     health:
       show-details: always
+      probes:
+        enabled: true
+  health:
+    livenessState:
+      enabled: true
+    readinessState:
+      enabled: true
   info:
     env:
       enabled: true
+  metrics:
+    tags:
+      application: property-backend
 
 springdoc:
   api-docs:
