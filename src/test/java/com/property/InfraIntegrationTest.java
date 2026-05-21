@@ -8,11 +8,11 @@ import com.property.mapper.UserMapper;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
-import org.springframework.amqp.rabbit.connection.ConnectionFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.testcontainers.DockerClientFactory;
@@ -24,9 +24,9 @@ import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
- * B1 集成测试：使用 Testcontainers 起 MySQL 容器，执行 Flyway V1+V2，
+ * B1 集成测试：使用 Testcontainers 起 MySQL 容器，执行 Flyway 全量迁移，
  * 验证实体映射与种子数据完整性。
- * Redis / RabbitMQ 用 MockBean 替代，不依赖 Docker Compose。
+ * 排除 Redis / RabbitMQ / Sa-Token-Redis 全部自动配置，仅测试 MySQL 数据层。
  *
  * 注意：本测试需要 Docker 环境，若本机未启动 Docker Desktop 则自动跳过。
  */
@@ -34,12 +34,25 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
         "spring.flyway.enabled=true",
         "spring.flyway.locations=classpath:db/migration",
         "app.websocket.enabled=false",
+        // 禁用 Redis / RabbitMQ 健康检查
         "management.health.redis.enabled=false",
-        "management.health.rabbit.enabled=false"
+        "management.health.rabbit.enabled=false",
+        // 排除所有 Redis（含 Reactive）、RabbitMQ、Sa-Token-Redis 自动配置
+        "spring.autoconfigure.exclude=" +
+                "org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration," +
+                "org.springframework.boot.autoconfigure.data.redis.RedisReactiveAutoConfiguration," +
+                "org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration," +
+                "org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration," +
+                "cn.dev33.satoken.dao.SaTokenDaoRedisJackson"
 })
 class InfraIntegrationTest {
 
     static MySQLContainer<?> MYSQL;
+
+    // ---- Mock 基础设施 bean，满足应用层 @Configuration / @Service 依赖 ----
+    @MockBean RedisConnectionFactory redisConnectionFactory;
+    @MockBean StringRedisTemplate stringRedisTemplate;
+    @MockBean org.springframework.amqp.rabbit.connection.ConnectionFactory amqpConnectionFactory;
 
     @BeforeAll
     static void startContainerIfDockerAvailable() {
@@ -67,14 +80,6 @@ class InfraIntegrationTest {
             MYSQL.stop();
         }
     }
-
-    /** 用 Mock 代替真实 Redis，避免测试依赖 Docker Redis */
-    @MockBean
-    RedisConnectionFactory redisConnectionFactory;
-
-    /** 用 Mock 代替真实 RabbitMQ */
-    @MockBean
-    ConnectionFactory rabbitConnectionFactory;
 
     @DynamicPropertySource
     static void overrideProps(DynamicPropertyRegistry registry) {
